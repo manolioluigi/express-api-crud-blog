@@ -1,4 +1,4 @@
-const posts = require('../db');
+const posts = require('../posts.json');
 
 //index
 function index(req, res) {
@@ -62,9 +62,41 @@ function download(req, res) {
     }
 }
 
+//store
+function store(req, res) {
+
+    const { title, content, image, tags } = req.body;
+
+    const newPost = {
+        title,
+        content,
+        image,
+        tags,
+        slug: generateSlug(title),
+    };
+
+    posts.push(newPost);
+
+    if (req.accepts('html')) {
+        res.redirect('/');
+    } else {
+        res.json(newPost);
+    }
+}
+
+
+//funzioni utilities
+function generateSlug(title) {
+    const trimmedTitle = title.trim();
+    const slug = trimmedTitle.replace(/\s+/g, '-');
+    const lowercaseSlug = slug.toLowerCase();
+    return lowercaseSlug;
+}
+
 module.exports = {
     index,
     show,
     create,
     download,
+    store,
 };
