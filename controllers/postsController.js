@@ -1,4 +1,16 @@
 const posts = require('../posts.json');
+const fs = require('fs');
+const path = require('path');
+
+//storage/upload
+const multer = require('multer');
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public/imgs/posts');
+    },
+});
+const upload = multer({ storage: storage });
 
 //index
 function index(req, res) {
@@ -64,25 +76,54 @@ function download(req, res) {
 
 //store
 function store(req, res) {
+    const { title, content, tags } = req.body;
+    upload.single('image')(req, res, () => {
+        const image = req.file.filename;
 
-    const { title, content, image, tags } = req.body;
+        const newPost = {
+            title,
+            content,
+            tags,
+            image,
+            slug: generateSlug(title),
+        };
 
-    const newPost = {
-        title,
-        content,
-        image,
-        tags,
-        slug: generateSlug(title),
-    };
+        posts.push(newPost);
 
-    posts.push(newPost);
+        if (req.accepts('html')) {
+            res.redirect('/');
+        } else {
+            res.json(newPost);
+        }
+    });
+}
 
-    if (req.accepts('html')) {
-        res.redirect('/');
+//destroy
+function destroy(req, res) {
+    const slug = req.params.slug;
+    const postIndex = posts.findIndex(post => post.slug === slug);
+
+    if (postIndex !== -1) {
+
+        const deletedPost = posts.splice(postIndex, 1)[0];
+
+        const imagePath = path.join(__dirname, '..', 'public', 'imgs', 'posts', deletedPost.image);
+        fs.unlinkSync(imagePath);
+
+        if (req.accepts('html')) {
+            res.redirect('/');
+        } else {
+            res.json({ message: 'Post eliminato', deletedPost });
+        }
     } else {
-        res.json(newPost);
+        if (req.accepts('html')) {
+            res.redirect('/');
+        } else {
+            res.status(404).json({ message: 'Post non trovato' });
+        }
     }
 }
+
 
 
 //funzioni utilities
@@ -99,4 +140,6 @@ module.exports = {
     create,
     download,
     store,
+    destroy,
+    upload
 };
